@@ -20,7 +20,9 @@
   main { padding:20px 16px 40px; overflow-x:auto; }
   .page { margin:0 auto; width:100%; max-width:900px; transition:max-width .15s; }
   .page img { display:block; width:100%; height:auto; box-shadow:0 12px 40px rgba(0,0,0,.55); border-radius:2px; cursor:zoom-in; }
-  .page.grand img { cursor:zoom-out; }
+  .page.grand img { cursor:grab; }
+  .page.grand.drag img { cursor:grabbing; }
+  .page img { user-select:none; -webkit-user-drag:none; }
   footer { text-align:center; font-size:11px; color:var(--doux); padding-bottom:24px; }
 </style>
 </head>
@@ -38,25 +40,60 @@
 </main>
 <footer>Document confidentiel — destiné aux autorités compétentes.</footer>
 <script>
-  var BASE = 900, z = 1, page = document.getElementById('page');
+  var BASE = 900, ZMAX = 2.5, z = 1, page = document.getElementById('page'), main = document.querySelector('main'), img = document.getElementById('doc');
   function appliquer(nz, garderX, garderY) {
     var avant = page.getBoundingClientRect();
     var fx = garderX === undefined ? 0.5 : (garderX - avant.left) / avant.width;
     var fy = garderY === undefined ? 0.5 : (garderY - avant.top) / avant.height;
     var sx = garderX === undefined ? innerWidth / 2 : garderX, sy = garderY === undefined ? innerHeight / 2 : garderY;
-    z = Math.max(1, Math.min(4, nz));
+    z = Math.max(1, Math.min(ZMAX, nz));
+    if (Math.abs(z - 1) < 0.01) z = 1;
     page.style.maxWidth = (BASE * z) + 'px';
     page.style.width = z > 1 ? (BASE * z) + 'px' : '100%';
     page.classList.toggle('grand', z > 1);
     document.getElementById('pct').textContent = Math.round(z * 100) + ' %';
-    var apres = page.getBoundingClientRect(), main = document.querySelector('main');
+    var apres = page.getBoundingClientRect();
     main.scrollLeft += apres.left + fx * apres.width - sx;
     scrollBy(0, apres.top + fy * apres.height - sy);
   }
   document.getElementById('plus').onclick  = function () { appliquer(z * 1.25); };
   document.getElementById('moins').onclick = function () { appliquer(z / 1.25); };
   document.getElementById('pct').onclick   = function () { appliquer(1); };
-  document.getElementById('doc').onclick   = function (e) { appliquer(z > 1 ? 1 : 2.2, e.clientX, e.clientY); };
+
+  // Ctrl + molette (ou pincement au pavé tactile) : zoom centré sur la souris
+  addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    appliquer(z * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+  }, { passive: false });
+
+  // Glisser pour se déplacer quand c'est zoomé ; un simple clic bascule le zoom
+  var glisse = null;
+  img.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    glisse = { x: e.clientX, y: e.clientY, bouge: false };
+    img.setPointerCapture(e.pointerId);
+  });
+  img.addEventListener('pointermove', function (e) {
+    if (!glisse) return;
+    var dx = e.clientX - glisse.x, dy = e.clientY - glisse.y;
+    if (!glisse.bouge && Math.abs(dx) + Math.abs(dy) < 5) return;
+    if (z === 1) return;
+    glisse.bouge = true;
+    page.classList.add('drag');
+    main.scrollLeft -= dx;
+    scrollBy(0, -dy);
+    glisse.x = e.clientX; glisse.y = e.clientY;
+  });
+  img.addEventListener('pointerup', function (e) {
+    if (!glisse) return;
+    var clic = !glisse.bouge;
+    glisse = null;
+    page.classList.remove('drag');
+    if (clic) appliquer(z > 1 ? 1 : 2, e.clientX, e.clientY);
+  });
+  img.addEventListener('pointercancel', function () { glisse = null; page.classList.remove('drag'); });
+  img.addEventListener('click', function (e) { if (e.pointerType === 'touch' || e.detail === 0) appliquer(z > 1 ? 1 : 2, e.clientX, e.clientY); });
 </script>
 </body>
 </html>
