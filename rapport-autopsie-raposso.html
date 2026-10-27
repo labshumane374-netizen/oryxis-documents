@@ -23,6 +23,15 @@
   .page.grand img { cursor:grab; }
   .page.grand.drag img { cursor:grabbing; }
   .page img { user-select:none; -webkit-user-drag:none; }
+  #haut { position:fixed; z-index:3; right:max(16px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom));
+          display:flex; align-items:center; gap:6px; padding:0 clamp(12px, 1.2vw, 22px); height:clamp(42px, 3.2vw, 60px);
+          font:600 clamp(14px, 1vw, 19px) 'Segoe UI',system-ui,sans-serif; color:var(--texte); background:var(--accent);
+          border:1px solid #4d8fd6; border-radius:999px; box-shadow:0 6px 20px rgba(0,0,0,.45); cursor:pointer;
+          opacity:0; transform:translateY(12px); pointer-events:none; transition:opacity .2s, transform .2s; }
+  #haut.visible { opacity:1; transform:none; pointer-events:auto; }
+  #haut:hover { background:#3b82cf; }
+  #haut span { font-size:1.25em; line-height:1; }
+  @media (max-width:520px) { #haut b { display:none; } #haut { width:48px; justify-content:center; padding:0; } }
   footer { text-align:center; font-size:11px; color:var(--doux); padding-bottom:24px; }
 </style>
 </head>
@@ -38,6 +47,7 @@
 <main>
   <div class="page" id="page"><img src="ems/rapport_autopsie_raposso.png" alt="Rapport d'autopsie de Julian Raposso" id="doc"></div>
 </main>
+<button id="haut" aria-label="Remonter en haut du document"><span>↑</span><b>Haut</b></button>
 <footer>Document confidentiel — destiné aux autorités compétentes.</footer>
 <script>
   var BASE = 900, ZMAX = 2.5, z = 1, page = document.getElementById('page'), main = document.querySelector('main'), img = document.getElementById('doc');
@@ -94,6 +104,16 @@
   });
   img.addEventListener('pointercancel', function () { glisse = null; page.classList.remove('drag'); });
   img.addEventListener('click', function (e) { if (e.pointerType === 'touch' || e.detail === 0) appliquer(z > 1 ? 1 : 2, e.clientX, e.clientY); });
+  // Bouton « Haut » : visible dès qu'on a défilé, ramène en haut à gauche du document
+  var haut = document.getElementById('haut');
+  function majHaut() { haut.classList.toggle('visible', scrollY > innerHeight * 0.4 || main.scrollLeft > 40); }
+  addEventListener('scroll', majHaut, { passive: true });
+  main.addEventListener('scroll', majHaut, { passive: true });
+  haut.onclick = function () {
+    scrollTo({ top: 0, behavior: 'smooth' });
+    main.scrollTo({ left: 0, behavior: 'smooth' });
+  };
+  majHaut();
 </script>
 </body>
 </html>
