@@ -45,13 +45,13 @@
   <div class="page" id="page"><img src="ems/rapport_autopsie_raposso.png" alt="Rapport d'autopsie de Julian Raposso" id="doc"></div>
 </main>
 <nav id="dock" aria-label="Navigation du document">
-  <button id="haut" aria-label="Remonter en haut" title="Haut">↑</button>
+  <button id="haut" aria-label="Remonter" title="Remonter">↑</button>
   <hr>
   <button id="plus" aria-label="Zoomer" title="Zoomer">+</button>
   <button id="pct" aria-label="Taille normale" title="Taille normale">100 %</button>
   <button id="moins" aria-label="Dézoomer" title="Dézoomer">−</button>
   <hr>
-  <button id="bas" aria-label="Descendre en bas" title="Bas">↓</button>
+  <button id="bas" aria-label="Descendre" title="Descendre">↓</button>
 </nav>
 <footer>Document confidentiel — destiné aux autorités compétentes.</footer>
 <script>
@@ -114,7 +114,7 @@
   var haut = document.getElementById('haut'), bas = document.getElementById('bas');
   function majDock() {
     var fin = document.documentElement.scrollHeight - innerHeight;
-    haut.disabled = scrollY < 4 && main.scrollLeft < 4;
+    haut.disabled = scrollY < 4;
     bas.disabled = scrollY > fin - 4;
     document.getElementById('plus').disabled = z >= ZMAX;
     document.getElementById('moins').disabled = z <= 1;
@@ -123,8 +123,10 @@
   addEventListener('resize', majDock);
   main.addEventListener('scroll', majDock, { passive: true });
   img.addEventListener('load', majDock);
-  haut.onclick = function () { scrollTo({ top: 0, behavior: 'smooth' }); main.scrollTo({ left: 0, behavior: 'smooth' }); };
-  bas.onclick  = function () { scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); };
+  // Un clic = un petit pas (un tiers d'écran)
+  function pas() { return Math.round(innerHeight * 0.33); }
+  haut.onclick = function () { scrollBy({ top: -pas(), behavior: 'smooth' }); };
+  bas.onclick  = function () { scrollBy({ top: pas(), behavior: 'smooth' }); };
   majDock();
 </script>
 </body>
