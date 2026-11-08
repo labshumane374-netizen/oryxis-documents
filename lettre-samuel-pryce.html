@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lettre jaunie — Samuel Pryce</title>
+<style>
+  :root { --fond:#241c14; --barre:#1a130c; --texte:#f1e4c8; --doux:#b9a27c; --accent:#8a6a3c; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--fond); color:var(--texte); font-family:'Segoe UI',system-ui,sans-serif; }
+  header { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:10px 16px; background:var(--barre); border-bottom:1px solid #3d2e1d; }
+  header h1 { font-size:15px; font-weight:600; }
+  header small { display:block; font-size:11px; color:var(--doux); font-weight:400; }
+  main { padding:20px 16px 40px; overflow-x:auto; }
+  .page { margin:0 auto; width:100%; max-width:1100px; transition:max-width .15s; display:flex; flex-direction:column; gap:28px; }
+  .page img { display:block; width:100%; height:auto; cursor:zoom-in; }
+  .page.grand img { cursor:grab; }
+  .page.grand.drag img { cursor:grabbing; }
+  .page img { user-select:none; -webkit-user-drag:none; }
+  #dock { position:fixed; z-index:3; right:max(14px, env(safe-area-inset-right)); top:50%; transform:translateY(-50%);
+          display:flex; flex-direction:column; gap:clamp(5px, .5vw, 10px); padding:clamp(6px, .5vw, 10px);
+          background:rgba(26,19,12,.88); border:1px solid #5a4428; border-radius:16px; box-shadow:0 8px 28px rgba(0,0,0,.5);
+          backdrop-filter:blur(6px); }
+  #dock button { width:clamp(42px, 2.8vw, 64px); height:clamp(42px, 2.8vw, 64px); display:flex; align-items:center; justify-content:center;
+                 font:600 clamp(18px, 1.25vw, 28px) 'Segoe UI',system-ui,sans-serif; color:var(--texte); background:#3a2b1a;
+                 border:1px solid #5a4428; border-radius:10px; cursor:pointer; }
+  #dock button:hover:not(:disabled) { background:var(--accent); }
+  #dock button:disabled { opacity:.35; cursor:default; }
+  #dock #pct { font-size:clamp(11px, .7vw, 16px); }
+  #dock hr { border:0; border-top:1px solid #5a4428; margin:2px 4px; }
+  @media (max-width:600px) {
+    #dock { top:auto; transform:none; bottom:max(12px, env(safe-area-inset-bottom)); right:50%; translate:50% 0; flex-direction:row; }
+    #dock hr { border-top:0; border-left:1px solid #5a4428; margin:4px 2px; }
+    main { padding-bottom:96px; }
+  }
+  footer { text-align:center; font-size:11px; color:var(--doux); padding-bottom:24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lettre jaunie<small>Samuel Pryce · Mont Gordo, 14 novembre 1859</small></h1>
+</header>
+<main>
+  <div class="page" id="page">
+    <img src="lore/lettre_ouvrier_harlow_page1-2.png" alt="Lettre de Samuel Pryce, pages 1 et 2">
+    <img src="lore/lettre_ouvrier_harlow_page3-4.png" alt="Lettre de Samuel Pryce, pages 3 et 4">
+    <img src="lore/lettre_ouvrier_harlow_page5-6.png" alt="Lettre de Samuel Pryce, pages 5 et 6">
+  </div>
+</main>
+<nav id="dock" aria-label="Navigation du document">
+  <button id="haut" aria-label="Remonter" title="Remonter">↑</button>
+  <hr>
+  <button id="plus" aria-label="Zoomer" title="Zoomer">+</button>
+  <button id="pct" aria-label="Taille normale" title="Taille normale">100 %</button>
+  <button id="moins" aria-label="Dézoomer" title="Dézoomer">−</button>
+  <hr>
+  <button id="bas" aria-label="Descendre" title="Descendre">↓</button>
+</nav>
+<footer>Lettre retrouvée dans la mine de Harlow.</footer>
+<script>
+  var BASE = 1100, ZMAX = 2.5, z = 1, page = document.getElementById('page'), main = document.querySelector('main'), img = page;
+  function appliquer(nz, garderX, garderY) {
+    var avant = page.getBoundingClientRect();
+    var fx = garderX === undefined ? 0.5 : (garderX - avant.left) / avant.width;
+    var fy = garderY === undefined ? 0.5 : (garderY - avant.top) / avant.height;
+    var sx = garderX === undefined ? innerWidth / 2 : garderX, sy = garderY === undefined ? innerHeight / 2 : garderY;
+    z = Math.max(1, Math.min(ZMAX, nz));
+    if (Math.abs(z - 1) < 0.01) z = 1;
+    page.style.maxWidth = (BASE * z) + 'px';
+    page.style.width = z > 1 ? (BASE * z) + 'px' : '100%';
+    page.classList.toggle('grand', z > 1);
+    document.getElementById('pct').textContent = Math.round(z * 100) + ' %';
+    var apres = page.getBoundingClientRect();
+    main.scrollLeft += apres.left + fx * apres.width - sx;
+    scrollBy(0, apres.top + fy * apres.height - sy);
+    if (window.majDock) majDock();
+  }
+  document.getElementById('plus').onclick  = function () { appliquer(z * 1.25); };
+  document.getElementById('moins').onclick = function () { appliquer(z / 1.25); };
+  document.getElementById('pct').onclick   = function () { appliquer(1); };
+
+  // Ctrl + molette (ou pincement au pavé tactile) : zoom centré sur la souris
+  addEventListener('wheel', function (e) {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    appliquer(z * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+  }, { passive: false });
+
+  // Glisser pour se déplacer quand c'est zoomé ; un simple clic bascule le zoom
+  var glisse = null;
+  img.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    glisse = { x: e.clientX, y: e.clientY, bouge: false };
+    img.setPointerCapture(e.pointerId);
+  });
+  img.addEventListener('pointermove', function (e) {
+    if (!glisse) return;
+    var dx = e.clientX - glisse.x, dy = e.clientY - glisse.y;
+    if (!glisse.bouge && Math.abs(dx) + Math.abs(dy) < 5) return;
+    if (z === 1) return;
+    glisse.bouge = true;
+    page.classList.add('drag');
+    main.scrollLeft -= dx;
+    scrollBy(0, -dy);
+    glisse.x = e.clientX; glisse.y = e.clientY;
+  });
+  img.addEventListener('pointerup', function (e) {
+    if (!glisse) return;
+    var clic = !glisse.bouge;
+    glisse = null;
+    page.classList.remove('drag');
+    if (clic) appliquer(z > 1 ? 1 : 2, e.clientX, e.clientY);
+  });
+  img.addEventListener('pointercancel', function () { glisse = null; page.classList.remove('drag'); });
+  img.addEventListener('click', function (e) { if (e.pointerType === 'touch' || e.detail === 0) appliquer(z > 1 ? 1 : 2, e.clientX, e.clientY); });
+  // Barre flottante : haut / bas, boutons grisés aux extrémités
+  var haut = document.getElementById('haut'), bas = document.getElementById('bas');
+  function majDock() {
+    var fin = document.documentElement.scrollHeight - innerHeight;
+    haut.disabled = scrollY < 4;
+    bas.disabled = scrollY > fin - 4;
+    document.getElementById('plus').disabled = z >= ZMAX;
+    document.getElementById('moins').disabled = z <= 1;
+  }
+  addEventListener('scroll', majDock, { passive: true });
+  addEventListener('resize', majDock);
+  main.addEventListener('scroll', majDock, { passive: true });
+  page.querySelectorAll('img').forEach(function (i) { i.addEventListener('load', majDock); });
+  // Un clic = un petit pas (un tiers d'écran)
+  function pas() { return Math.round(innerHeight * 0.33); }
+  haut.onclick = function () { scrollBy({ top: -pas(), behavior: 'smooth' }); };
+  bas.onclick  = function () { scrollBy({ top: pas(), behavior: 'smooth' }); };
+  majDock();
+</script>
+</body>
+</html>
